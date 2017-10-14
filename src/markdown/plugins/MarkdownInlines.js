@@ -8,6 +8,7 @@ const REGEX = {
     BOLD: /([*])(?:(?=(\\?))\2.)+?\1/,
     CONSECUTIVE: {
         TILDE: /`{2,}/,
+        ASTERISK: /\*{2,}/,
     }
 };
 
@@ -59,21 +60,11 @@ export function MarkdownInlinesPlugin(options) {
                 return 'code';
             }
 
-            if (chars.match(REGEX.CODEBLOCK)) {
-                return 'codeblock';
+            if (chars.match(REGEX.BOLD) && !chars.match(REGEX.CONSECUTIVE.ASTERISK)) {
+                return 'bold';
             }
+
             return null;
-        },
-
-        getLinkData(chars) {
-            const [match, text, , href] = chars.match(REGEX.LINK);
-            return { text, href, match };
-        },
-
-        getCodeData(chars) {
-            const [match] = chars.match(REGEX.CODE);
-            const [, text] = match.split('`');
-            return { match, text };
         },
 
         onKeyUp(e, data, change) {
@@ -93,14 +84,18 @@ export function MarkdownInlinesPlugin(options) {
          */
 
         onKeyDown(e, data, change) {
+            if (data.isShift) {
+                switch (data.key) {
+                    case '8': return this.doBoldConversion(e, change)
+                    default: return
+                }
+            }
+
             switch (data.key) {
                 case 'space': return this.onSpace(e, change)
                 case 'backspace': return this.onBackspace(e, change)
                 case 'enter': return this.onEnter(e, change)
-
                 case '`': return this.doCodeConversion(e, change)
-                case '*': return this.doCodeConversion(e, change)
-
                 default: return this.onDefault(e, change)
             }
         },
@@ -119,16 +114,29 @@ export function MarkdownInlinesPlugin(options) {
                 changeAfter.insertText(' ');
                 return true;
             });
-            this.doBoldConversion(e, change, (changeAfter) => {
-                changeAfter.insertText(' ');
-                return true;
-            });
         },
 
         onDefault(e, change) {
-            // this.doLinkConversion(e, change, () => {
-            //     return true;
-            // });
+        },
+
+        getDataFromText(chars, type) {
+            switch(type) {
+                case 'link': {
+                    const [match, text, , href] = chars.match(REGEX.LINK);
+                    return { text, href, match };
+                }
+                case 'code': {
+                    const [match] = chars.match(REGEX.CODE);
+                    const [, text] = match.split('`');
+                    return { match, text };
+                }
+                case 'bold': {
+                    const [match] = chars.match(REGEX.BOLD);
+                    const [, text] = match.split('*');
+                    return { match, text };
+                }
+                default: return {};
+            }
         },
 
         doBoldConversion(e, change, next = _.identity) {
@@ -143,7 +151,7 @@ export function MarkdownInlinesPlugin(options) {
             if (type === 'bold') {
                 e.preventDefault()
 
-                const { match, text } = this.getCodeData(withClosingTag);
+                const { match, text } = this.getDataFromText(withClosingTag, type);
 
                 change
                     .deleteBackward(match.length - 1) // delete the ** text
@@ -168,7 +176,7 @@ export function MarkdownInlinesPlugin(options) {
             if (type !== 'link') return
             e.preventDefault()
 
-            const { text, href, match } = this.getLinkData(chars);
+            const { text, href, match } = this.getDataFromText(chars, type);
 
             change
                 .deleteBackward(match.length) // delete the []() text
@@ -191,7 +199,7 @@ export function MarkdownInlinesPlugin(options) {
             if (type === 'code') {
                 e.preventDefault()
 
-                const { match, text } = this.getCodeData(withClosingTag);
+                const { match, text } = this.getDataFromText(withClosingTag, type);
 
                 change
                     .deleteBackward(match.length - 1) // delete the `` text

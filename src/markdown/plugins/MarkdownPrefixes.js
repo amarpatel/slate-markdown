@@ -70,7 +70,6 @@ export function MarkdownPrefixPlugin(options) {
          */
 
         onSpace(e, change) {
-            console.log('ms')
             const { state } = change
             if (state.isExpanded) return
 
@@ -112,8 +111,6 @@ export function MarkdownPrefixPlugin(options) {
          */
 
         onBackspace(e, change) {
-            console.log('prefixes: ')
-            // debugger;
             const { state } = change
             if (state.isExpanded) return
             if (state.startOffset != 0) return
