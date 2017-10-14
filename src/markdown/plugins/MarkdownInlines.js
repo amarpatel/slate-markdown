@@ -7,10 +7,12 @@ const REGEX = {
     CODE: /([`])(?:(?=(\\?))\2.)+?\1/,
     BOLD: /([*])(?:(?=(\\?))\2.)+?\1/,
     STRIKE: /([~])(?:(?=(\\?))\2.)+?\1/,
+    UNDERLINE: /([_])(?:(?=(\\?))\2.)+?\1/,
     CONSECUTIVE: {
         BACKTICK: /`{2,}/,
         ASTERISK: /\*{2,}/,
         TILDE: /\~{2,}/,
+        _: /\_{2,}/,
     }
 };
 
@@ -46,6 +48,14 @@ function wrapStrike(change, { text }) {
 
     change.collapseToEnd()
 }
+function wrapUnderline(change, { text }) {
+    change.wrapInline({
+        type: 'underline',
+        data: { text }
+    });
+
+    change.collapseToEnd()
+}
 
 export function MarkdownInlinesPlugin(options) {
     return {
@@ -54,6 +64,7 @@ export function MarkdownInlinesPlugin(options) {
             'code',
             'bold',
             'strike',
+            'underline',
         ],
 
         /**
@@ -78,6 +89,10 @@ export function MarkdownInlinesPlugin(options) {
 
             if (chars.match(REGEX.STRIKE) && !chars.match(REGEX.CONSECUTIVE.TILDE)) {
                 return 'strike';
+            }
+
+            if (chars.match(REGEX.UNDERLINE) && !chars.match(REGEX.CONSECUTIVE._)) {
+                return 'underline';
             }
 
             return null;
@@ -115,6 +130,11 @@ export function MarkdownInlinesPlugin(options) {
                         return this.doStrikeConversion(e, change)
                     }
                     return this.doCodeConversion(e, change)
+                }
+                case '-': {
+                    if (data.isShift) {
+                        return this.doUnderlineConversion(e, change)
+                    }
                 }
                 case '8': {
                     if (data.isShift) {
@@ -165,7 +185,36 @@ export function MarkdownInlinesPlugin(options) {
                     const [, text] = match.split('~');
                     return { match, text };
                 }
+                case 'underline': {
+                    const [match] = chars.match(REGEX.UNDERLINE);
+                    const [, text] = match.split('_');
+                    return { match, text };
+                }
                 default: return {};
+            }
+        },
+
+        doUnderlineConversion(e, change, next = _.identity) {
+            const { state } = change
+            if (state.isExpanded) return
+            const { startBlock } = state
+            const chars = startBlock.text
+            const withClosingTag = chars + '_';
+            const type = this.getType(withClosingTag)
+
+            if (startBlock.type === 'code-block' || startBlock.type === 'code-container') return;
+            if (type === 'underline') {
+                e.preventDefault()
+
+                const { match, text } = this.getDataFromText(withClosingTag, type);
+
+                change
+                    .deleteBackward(match.length - 1) // delete the ** text
+                    .insertText(text)             // add just the url text
+                    .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
+                    .call(wrapUnderline, { text })         // wrap the selection in an `a` tag with href
+                    .setBlock('underline-container');
+                return next(change);
             }
         },
 
@@ -338,6 +387,20 @@ export function MarkdownInlinesPlugin(options) {
                     .insertText(visibleText);
                 return true;
             }
+
+            if (endBlock.type === 'underline-container') {
+                const node = this.getInlineNode(endBlock, 'underline');
+                if (!node) return;
+                const text = node.get('text');
+                const visibleText = `_${text}`;
+
+                e.preventDefault();
+                change
+                    .setBlock('text')
+                    .deleteBackward(text.length)
+                    .insertText(visibleText);
+                return true;
+            }
         },
 
         getInlineNode(block, kind) {
@@ -392,4 +455,10 @@ export const markdownInlineNodes = {
         return (<span {...props.attributes} style={{ display: 'inline', textDecoration: 'line-through' }} href={text}>{props.children}</span>);
     },
     'strike-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
+    underline(props) {
+        const { data } = props.node;
+        const text = data.get('text');
+        return (<span {...props.attributes} style={{ display: 'inline', textDecoration: 'underline' }} href={text}>{props.children}</span>);
+    },
+    'underline-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
 };
