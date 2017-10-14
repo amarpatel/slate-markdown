@@ -6,9 +6,11 @@ const REGEX = {
     LINK: /\[(.*?)(\]\()([A-Za-z0-9\-\.\_\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=]+)\)/,
     CODE: /([`])(?:(?=(\\?))\2.)+?\1/,
     BOLD: /([*])(?:(?=(\\?))\2.)+?\1/,
+    STRIKE: /([~])(?:(?=(\\?))\2.)+?\1/,
     CONSECUTIVE: {
-        TILDE: /`{2,}/,
+        BACKTICK: /`{2,}/,
         ASTERISK: /\*{2,}/,
+        TILDE: /\~{2,}/,
     }
 };
 
@@ -36,12 +38,22 @@ function wrapBold(change, { text }) {
 
     change.collapseToEnd()
 }
+function wrapStrike(change, { text }) {
+    change.wrapInline({
+        type: 'strike',
+        data: { text }
+    });
+
+    change.collapseToEnd()
+}
 
 export function MarkdownInlinesPlugin(options) {
     return {
         types: [
             'link',
             'code',
+            'bold',
+            'strike',
         ],
 
         /**
@@ -56,12 +68,16 @@ export function MarkdownInlinesPlugin(options) {
                 return 'link';
             }
 
-            if (chars.match(REGEX.CODE) && !chars.match(REGEX.CONSECUTIVE.TILDE)) {
+            if (chars.match(REGEX.CODE) && !chars.match(REGEX.CONSECUTIVE.BACKTICK)) {
                 return 'code';
             }
 
             if (chars.match(REGEX.BOLD) && !chars.match(REGEX.CONSECUTIVE.ASTERISK)) {
                 return 'bold';
+            }
+
+            if (chars.match(REGEX.STRIKE) && !chars.match(REGEX.CONSECUTIVE.TILDE)) {
+                return 'strike';
             }
 
             return null;
@@ -84,18 +100,27 @@ export function MarkdownInlinesPlugin(options) {
          */
 
         onKeyDown(e, data, change) {
-            if (data.isShift) {
-                switch (data.key) {
-                    case '8': return this.doBoldConversion(e, change)
-                    default: return
-                }
-            }
-
             switch (data.key) {
-                case 'space': return this.onSpace(e, change)
-                case 'backspace': return this.onBackspace(e, change)
-                case 'enter': return this.onEnter(e, change)
-                case '`': return this.doCodeConversion(e, change)
+                case 'space': {
+                    return this.onSpace(e, change)
+                }
+                case 'backspace': {
+                    return this.onBackspace(e, change)
+                }
+                case 'enter': {
+                    return this.onEnter(e, change)
+                }
+                case '`': {
+                    if (data.isShift) {
+                        return this.doStrikeConversion(e, change)
+                    }
+                    return this.doCodeConversion(e, change)
+                }
+                case '8': {
+                    if (data.isShift) {
+                        return this.doBoldConversion(e, change)
+                    }
+                }
                 default: return this.onDefault(e, change)
             }
         },
@@ -135,7 +160,36 @@ export function MarkdownInlinesPlugin(options) {
                     const [, text] = match.split('*');
                     return { match, text };
                 }
+                case 'strike': {
+                    const [match] = chars.match(REGEX.STRIKE);
+                    const [, text] = match.split('~');
+                    return { match, text };
+                }
                 default: return {};
+            }
+        },
+
+        doStrikeConversion(e, change, next = _.identity) {
+            const { state } = change
+            if (state.isExpanded) return
+            const { startBlock } = state
+            const chars = startBlock.text
+            const withClosingTag = chars + '~';
+            const type = this.getType(withClosingTag)
+
+            if (startBlock.type === 'code-block' || startBlock.type === 'code-container') return;
+            if (type === 'strike') {
+                e.preventDefault()
+
+                const { match, text } = this.getDataFromText(withClosingTag, type);
+
+                change
+                    .deleteBackward(match.length - 1) // delete the ** text
+                    .insertText(text)             // add just the url text
+                    .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
+                    .call(wrapStrike, { text })         // wrap the selection in an `a` tag with href
+                    .setBlock('strike-container');
+                return next(change);
             }
         },
 
@@ -270,6 +324,20 @@ export function MarkdownInlinesPlugin(options) {
                     .insertText(visibleText);
                 return true;
             }
+
+            if (endBlock.type === 'strike-container') {
+                const node = this.getInlineNode(endBlock, 'strike');
+                if (!node) return;
+                const text = node.get('text');
+                const visibleText = `~${text}`;
+
+                e.preventDefault();
+                change
+                    .setBlock('text')
+                    .deleteBackward(text.length)
+                    .insertText(visibleText);
+                return true;
+            }
         },
 
         getInlineNode(block, kind) {
@@ -318,4 +386,10 @@ export const markdownInlineNodes = {
         return (<strong {...props.attributes} style={{ display: 'inline' }} href={text}>{props.children}</strong>);
     },
     'bold-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
+    strike(props) {
+        const { data } = props.node;
+        const text = data.get('text');
+        return (<span {...props.attributes} style={{ display: 'inline', textDecoration: 'line-through' }} href={text}>{props.children}</span>);
+    },
+    'strike-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
 };
