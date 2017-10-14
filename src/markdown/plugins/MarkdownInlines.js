@@ -226,17 +226,13 @@ export function MarkdownInlinesPlugin(options) {
             if (state.isExpanded) return
             if (state.startOffset != 0) return
 
-            const { startBlock, endBlock, startOffset, endOffset } = state
-
-            console.log('bs startBlock: ', startBlock);
-            console.log('bs startOffset: ', startOffset);
-            console.log('bs endOffset: ', endOffset);
+            const { endBlock } = state
 
             if (endBlock.type === 'link-container') {
-                const link = this.getLink(endBlock);
-                if (!link) return;
-                const text = link.get('text');
-                const href = link.get('href');
+                const node = this.getInlineNode(endBlock, 'link');
+                if (!node) return;
+                const text = node.get('text');
+                const href = node.get('href');
                 const visibleText = `[${text}](${href})`;
 
                 e.preventDefault();
@@ -248,10 +244,24 @@ export function MarkdownInlinesPlugin(options) {
             }
 
             if (endBlock.type === 'code-container') {
-                const code = this.getCode(endBlock);
-                if (!code) return;
-                const text = code.get('text');
+                const node = this.getInlineNode(endBlock, 'code');
+                if (!node) return;
+                const text = node.get('text');
                 const visibleText = `\`${text}`;
+
+                e.preventDefault();
+                change
+                    .setBlock('text')
+                    .deleteBackward(text.length)
+                    .insertText(visibleText);
+                return true;
+            }
+
+            if (endBlock.type === 'bold-container') {
+                const node = this.getInlineNode(endBlock, 'bold');
+                if (!node) return;
+                const text = node.get('text');
+                const visibleText = `\*${text}`;
 
                 e.preventDefault();
                 change
@@ -262,15 +272,8 @@ export function MarkdownInlinesPlugin(options) {
             }
         },
 
-        getLink(block) {
-            const inlines = block.getInlines().find(({type}) => type === 'link');
-            if (inlines) {
-                return inlines.first();
-            }
-        },
-
-        getCode(block) {
-            const inlines = block.getInlines().find(({type}) => type === 'code');
+        getInlineNode(block, kind) {
+            const inlines = block.getInlines().find(({type}) => type === kind);
             if (inlines) {
                 return inlines.first();
             }
