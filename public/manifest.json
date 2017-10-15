@@ -1,15 +1,26 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
-  "icons": [
+  "manifest_version": 2,
+  "name": "Live Markdown",
+  "version": "0.1",
+  "permissions": [
+    "https://*/*",
+    "http://*/*",
+    "tabs"
+  ],
+  "content_scripts": [
     {
-      "src": "favicon.ico",
-      "sizes": "192x192",
-      "type": "image/png"
+      "matches": ["<all_urls>"],
+      "js": ["/static/js/main.js"]
     }
   ],
-  "start_url": "./index.html",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "browser_action": {
+    "default_title": "Live Markdown",
+    "default_popup": "index.html"
+  },
+  "background": {
+    "scripts": [
+      "/static/js/main.js"
+    ],
+    "persistent": true
+  }
 }
