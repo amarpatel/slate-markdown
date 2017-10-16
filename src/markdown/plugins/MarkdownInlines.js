@@ -16,45 +16,9 @@ const REGEX = {
     }
 };
 
-function wrapLink(change, { text, href }) {
-    change.wrapInline({
-        type: 'link',
-        data: { text, href }
-    });
-
-    change.collapseToEnd()
-}
-function wrapCode(change, { text }) {
-    change.wrapInline({
-        type: 'code',
-        data: { text }
-    });
-
-    change.collapseToEnd()
-}
-function wrapBold(change, { text }) {
-    change.wrapInline({
-        type: 'bold',
-        data: { text }
-    });
-
-    change.collapseToEnd()
-}
-function wrapStrike(change, { text }) {
-    change.wrapInline({
-        type: 'strike',
-        data: { text }
-    });
-
-    change.collapseToEnd()
-}
-function wrapUnderline(change, { text }) {
-    change.wrapInline({
-        type: 'underline',
-        data: { text }
-    });
-
-    change.collapseToEnd()
+function wrapInlineWithData(change, type, data) {
+    change.wrapInline({ type, data });
+    change.collapseToEnd();
 }
 
 export function MarkdownInlinesPlugin(options) {
@@ -212,7 +176,7 @@ export function MarkdownInlinesPlugin(options) {
                     .deleteBackward(match.length - 1) // delete the ** text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                    .call(wrapUnderline, { text })         // wrap the selection in an `a` tag with href
+                    .call(wrapInlineWithData, 'underline', { text })         // wrap the selection in an `a` tag with href
                     .setBlock('underline-container');
                 return next(change);
             }
@@ -236,7 +200,7 @@ export function MarkdownInlinesPlugin(options) {
                     .deleteBackward(match.length - 1) // delete the ** text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                    .call(wrapStrike, { text })         // wrap the selection in an `a` tag with href
+                    .call(wrapInlineWithData, 'strike', { text })         // wrap the selection in an `a` tag with href
                     .setBlock('strike-container');
                 return next(change);
             }
@@ -260,7 +224,7 @@ export function MarkdownInlinesPlugin(options) {
                     .deleteBackward(match.length - 1) // delete the ** text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                    .call(wrapBold, { text })         // wrap the selection in an `a` tag with href
+                    .call(wrapInlineWithData, 'bold', { text })         // wrap the selection in an `a` tag with href
                     .setBlock('bold-container');
                 return next(change);
             }
@@ -285,7 +249,7 @@ export function MarkdownInlinesPlugin(options) {
                 .deleteBackward(match.length) // delete the []() text
                 .insertText(text)             // add just the url text
                 .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                .call(wrapLink, { text, href })         // wrap the selection in an `a` tag with href
+                .call(wrapInlineWithData, 'link', { text, href }) // wrap the selection in an `a` tag with href
                 .setBlock('link-container');
             next(change);
         },
@@ -308,8 +272,12 @@ export function MarkdownInlinesPlugin(options) {
                     .deleteBackward(match.length - 1) // delete the `` text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                    .call(wrapCode, { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('code-container');
+                    .call(wrapInlineWithData, 'code', { text })         // wrap the selection in an `a` tag with href
+
+                    // IS THIS RIGHT!?
+                    .setBlock('code-container')
+                    .setBlock('paragraph');
+                console.log('setting code block twice...');
                 return next(change);
             }
         },
@@ -426,6 +394,15 @@ export function MarkdownInlinesPlugin(options) {
                     .setBlock('paragraph');
                 return true;
             });
+
+            const TYPES = ['link', 'link-container', 'bold', 'bold-container', 'code', 'code-container'];
+            const { endBlock } = change.state;
+            if (TYPES.includes(endBlock.type)) {
+                change
+                    .splitBlock()
+                    .setBlock('paragraph');
+                return true;
+            }
         }
     };
 }
