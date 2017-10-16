@@ -98,17 +98,24 @@ function convertToHtml(state) {
                     }
                     break;
                 }
+                case 'italic_asterisk': {
+                    const text = convertToHtml(node);
+                    if (text.length) {
+                        t += `*${text}*`
+                    }
+                    break;
+                }
+                case 'italic_underscore': {
+                    const text = convertToHtml(node);
+                    if (text.length) {
+                        t += `_${text}_`
+                    }
+                    break;
+                }
                 case 'code': {
                     const text = convertToHtml(node);
                     if (text.length) {
                         t += `\`${text}\``
-                    }
-                    break;
-                }
-                case 'underline': {
-                    const text = convertToHtml(node);
-                    if (text.length) {
-                        t += `_${text}_`
                     }
                     break;
                 }

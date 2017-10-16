@@ -5,9 +5,9 @@ import _ from 'lodash';
 const REGEX = {
     LINK: /\[(.*?)(\]\()([A-Za-z0-9\-\.\_\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=]+)\)/,
     CODE: /([`])(?:(?=(\\?))\2.)+?\1/,
-    BOLD: /([*])(?:(?=(\\?))\2.)+?\1/,
+    ITALIC_ASTERISK: /([*])(?:(?=(\\?))\2.)+?\1/,
+    ITALIC_UNDERSCORE: /([_])(?:(?=(\\?))\2.)+?\1/,
     STRIKE: /([~])(?:(?=(\\?))\2.)+?\1/,
-    UNDERLINE: /([_])(?:(?=(\\?))\2.)+?\1/,
     CONSECUTIVE: {
         BACKTICK: /`{2,}/,
         ASTERISK: /\*{2,}/,
@@ -26,9 +26,9 @@ export function MarkdownInlinesPlugin(options) {
         types: [
             'link',
             'code',
-            'bold',
+            'italic_asterisk',
+            'italic_underscore',
             'strike',
-            'underline',
         ],
 
         /**
@@ -47,16 +47,16 @@ export function MarkdownInlinesPlugin(options) {
                 return 'code';
             }
 
-            if (chars.match(REGEX.BOLD) && !chars.match(REGEX.CONSECUTIVE.ASTERISK)) {
-                return 'bold';
+            if (chars.match(REGEX.ITALIC_ASTERISK) && !chars.match(REGEX.CONSECUTIVE.ASTERISK)) {
+                return 'italic_asterisk';
             }
 
             if (chars.match(REGEX.STRIKE) && !chars.match(REGEX.CONSECUTIVE.TILDE)) {
                 return 'strike';
             }
 
-            if (chars.match(REGEX.UNDERLINE) && !chars.match(REGEX.CONSECUTIVE._)) {
-                return 'underline';
+            if (chars.match(REGEX.ITALIC_UNDERSCORE) && !chars.match(REGEX.CONSECUTIVE._)) {
+                return 'italic_underscore';
             }
 
             return null;
@@ -97,12 +97,12 @@ export function MarkdownInlinesPlugin(options) {
                 }
                 case '-': {
                     if (data.isShift) {
-                        return this.doUnderlineConversion(e, change)
+                        return this.doItalicUnderscoreConversion(e, change)
                     }
                 }
                 case '8': {
                     if (data.isShift) {
-                        return this.doBoldConversion(e, change)
+                        return this.doItalicAsteriskConversion(e, change)
                     }
                 }
                 default: return this.onDefault(e, change)
@@ -139,8 +139,8 @@ export function MarkdownInlinesPlugin(options) {
                     const [, text] = match.split('`');
                     return { match, text };
                 }
-                case 'bold': {
-                    const [match] = chars.match(REGEX.BOLD);
+                case 'italic_asterisk': {
+                    const [match] = chars.match(REGEX.ITALIC_ASTERISK);
                     const [, text] = match.split('*');
                     return { match, text };
                 }
@@ -149,8 +149,8 @@ export function MarkdownInlinesPlugin(options) {
                     const [, text] = match.split('~');
                     return { match, text };
                 }
-                case 'underline': {
-                    const [match] = chars.match(REGEX.UNDERLINE);
+                case 'italic_underscore': {
+                    const [match] = chars.match(REGEX.ITALIC_UNDERSCORE);
                     const [, text] = match.split('_');
                     return { match, text };
                 }
@@ -158,7 +158,8 @@ export function MarkdownInlinesPlugin(options) {
             }
         },
 
-        doUnderlineConversion(e, change, next = _.identity) {
+        doItalicUnderscoreConversion(e, change, next = _.identity) {
+            console.log("172: ");
             const { state } = change
             if (state.isExpanded) return
             const { startBlock } = state
@@ -167,7 +168,7 @@ export function MarkdownInlinesPlugin(options) {
             const type = this.getType(withClosingTag)
 
             if (startBlock.type === 'code-block' || startBlock.type === 'code-container') return;
-            if (type === 'underline') {
+            if (type === 'italic_underscore') {
                 e.preventDefault()
 
                 const { match, text } = this.getDataFromText(withClosingTag, type);
@@ -176,8 +177,8 @@ export function MarkdownInlinesPlugin(options) {
                     .deleteBackward(match.length - 1) // delete the ** text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                    .call(wrapInlineWithData, 'underline', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('underline-container');
+                    .call(wrapInlineWithData, 'italic_underscore', { text })         // wrap the selection in an `a` tag with href
+                    .setBlock('italic-container');
                 return next(change);
             }
         },
@@ -206,7 +207,7 @@ export function MarkdownInlinesPlugin(options) {
             }
         },
 
-        doBoldConversion(e, change, next = _.identity) {
+        doItalicAsteriskConversion(e, change, next = _.identity) {
             const { state } = change
             if (state.isExpanded) return
             const { startBlock, startOffset } = state
@@ -215,7 +216,7 @@ export function MarkdownInlinesPlugin(options) {
             const type = this.getType(withClosingTag)
 
             if (startBlock.type === 'code-block' || startBlock.type === 'code-container') return;
-            if (type === 'bold') {
+            if (type === 'italic_asterisk') {
                 e.preventDefault()
 
                 const { match, text } = this.getDataFromText(withClosingTag, type);
@@ -224,8 +225,8 @@ export function MarkdownInlinesPlugin(options) {
                     .deleteBackward(match.length - 1) // delete the ** text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
-                    .call(wrapInlineWithData, 'bold', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('bold-container');
+                    .call(wrapInlineWithData, 'italic_asterisk', { text })         // wrap the selection in an `a` tag with href
+                    .setBlock('italic-container');
                 return next(change);
             }
         },
@@ -328,8 +329,8 @@ export function MarkdownInlinesPlugin(options) {
                 return true;
             }
 
-            if (endBlock.type === 'bold-container') {
-                const node = this.getInlineNode(endBlock, 'bold');
+            if (endBlock.type === 'italic-container') {
+                const node = this.getInlineNode(endBlock, 'italic');
                 if (!node) return;
                 const text = node.get('text');
                 const visibleText = `\*${text}`;
@@ -395,7 +396,7 @@ export function MarkdownInlinesPlugin(options) {
                 return true;
             });
 
-            const TYPES = ['link', 'link-container', 'bold', 'bold-container', 'code', 'code-container'];
+            const TYPES = ['link', 'link-container', 'italic', 'italic-container', 'code', 'code-container'];
             const { endBlock } = change.state;
             if (TYPES.includes(endBlock.type)) {
                 change
@@ -420,22 +421,27 @@ export const markdownInlineNodes = {
         return (<pre {...props.attributes} style={{ display: 'inline' }} href={text}>{props.children}</pre>);
     },
     'code-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
-    bold(props) {
+    italic_underscore(props) {
         const { data } = props.node;
         const text = data.get('text');
-        return (<strong {...props.attributes} style={{ display: 'inline' }} href={text}>{props.children}</strong>);
+        return (<span {...props.attributes} style={{ display: 'inline', fontStyle: 'italic' }} href={text}>{props.children}</span>);
     },
-    'bold-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
+    italic_asterisk(props) {
+        const { data } = props.node;
+        const text = data.get('text');
+        return (<span {...props.attributes} style={{ display: 'inline', fontStyle: 'italic' }} href={text}>{props.children}</span>);
+    },
+    'italic-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
     strike(props) {
         const { data } = props.node;
         const text = data.get('text');
         return (<span {...props.attributes} style={{ display: 'inline', textDecoration: 'line-through' }} href={text}>{props.children}</span>);
     },
     'strike-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
-    underline(props) {
-        const { data } = props.node;
-        const text = data.get('text');
-        return (<span {...props.attributes} style={{ display: 'inline', textDecoration: 'underline' }} href={text}>{props.children}</span>);
-    },
-    'underline-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
+    // underline(props) {
+    //     const { data } = props.node;
+    //     const text = data.get('text');
+    //     return (<span {...props.attributes} style={{ display: 'inline', textDecoration: 'underline' }} href={text}>{props.children}</span>);
+    // },
+    // 'underline-container': props => <span style={{ display: 'inline' }}>{props.children}</span>,
 };
