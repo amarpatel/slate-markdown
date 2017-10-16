@@ -91,13 +91,6 @@ function convertToHtml(state) {
                     }
                     break;
                 }
-                case 'bold': {
-                    const text = convertToHtml(node);
-                    if (text.length) {
-                        t += `**${text}**`
-                    }
-                    break;
-                }
                 case 'italic_asterisk': {
                     const text = convertToHtml(node);
                     if (text.length) {
@@ -108,7 +101,21 @@ function convertToHtml(state) {
                 case 'italic_underscore': {
                     const text = convertToHtml(node);
                     if (text.length) {
-                        t += `_${text}_`
+                        t += `*${text}*`
+                    }
+                    break;
+                }
+                case 'bold_asterisk': {
+                    const text = convertToHtml(node);
+                    if (text.length) {
+                        t += `**${text}**`
+                    }
+                    break;
+                }
+                case 'bold_underscore': {
+                    const text = convertToHtml(node);
+                    if (text.length) {
+                        t += `**${text}**`
                     }
                     break;
                 }
