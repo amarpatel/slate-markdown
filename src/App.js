@@ -21,19 +21,16 @@ const initialState = State.fromJSON({
       {
         kind: 'block',
         type: 'paragraph',
-        nodes: [
-          {
-            kind: 'text',
-            ranges: [
-              {
-                text: 'A line of text in a paragraph.'
-              }
-            ]
-          }
-        ]
-      }
+        nodes: [{ kind: 'text', ranges: [{ text: 'Start typing here' }] }]
+      },
+      { kind: 'block', type: 'paragraph' },
+      { kind: 'block', type: 'paragraph' },
+      { kind: 'block', type: 'paragraph' },
+      { kind: 'block', type: 'paragraph' },
+      { kind: 'block', type: 'paragraph' },
     ]
-  }
+  },
+  copyFormat: 'markdown'
 });
 
 // Define our app...
@@ -56,24 +53,65 @@ class App extends React.Component {
     return convertToMarkdown(doc);
   }
 
-  onCopyHandler(e, html) {
+  radioHandler(e) {
+      const copyFormat = e.currentTarget.name;
+      this.setState({ copyFormat });
+  }
+
+  componentDidMount() {
+      this.editor.focus();
+  }
+
+  onCopyHandler(e) {
     const { state } = this.editor.state;
     const { document } = state;
-    const markdownText = this.convertToMarkdown(document.toJS());
-    e.clipboardData.setData('text/plain', markdownText);
+    const { copyFormat } = this.state;
+    e.preventDefault();
+
+    if (copyFormat === 'html') {
+        const html = window.document.getElementById('root').innerHTML;
+        e.clipboardData.setData('text/html', html);
+    } else {
+        const markdownText = this.convertToMarkdown(document.toJS());
+        e.clipboardData.setData('text/plain', markdownText);
+    }
   }
 
   // Render the editor.
   render() {
     return (
-      <Editor
-        ref={ (editor) => {this.editor = editor;} }
-        onCopy={(...args) => this.onCopyHandler(...args)}
-        plugins={plugins}
-        schema={this.state.schema}
-        state={this.state.state}
-        onChange={this.onChange}
-      />
+        <div>
+          <div style={{ marginBottom: '2em' }}>
+            <form>
+                Copy format: <span style={{ paddingRight: '2em'}} ></span>
+                <input
+                    type="radio"
+                    id="markdown"
+                    name="markdown"
+                    value="markdown"
+                    onClick={(e) => this.radioHandler(e)}
+                    checked={this.state.copyFormat === 'markdown'}/>
+                <label htmlFor="markdown">Markdown</label>
+              <input
+                  type="radio"
+                  id="html"
+                  name="html"
+                  value="html"
+                  onClick={(e) => this.radioHandler(e)}
+                  checked={this.state.copyFormat === 'html'}/>
+              <label htmlFor="html">HTML</label>
+            </form>
+          </div>
+          <Editor
+            style={{ border: '1px solid rgba(128,128,128,0.25)', borderRadius: '5px' }}
+            ref={ (editor) => {this.editor = editor;} }
+            onCopy={(e) => this.onCopyHandler(e)}
+            plugins={plugins}
+            schema={this.state.schema}
+            state={this.state.state}
+            onChange={this.onChange}
+          />
+        </div>
     )
   }
 }
@@ -89,6 +127,8 @@ function convertToMarkdown(state) {
                     const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `${text}\n`
+                    } else {
+                        t += '\n';
                     }
                     break;
                 }
@@ -204,9 +244,15 @@ function convertToMarkdown(state) {
                     }
                     break;
                 }
+                case 'link': {
+                    const text = convertToMarkdown(node);
+                    const { href } = node.data;
+                    if (text.length){
+                        t += `[${text}](${href})`;
+                    }
+                    break;
+                }
                 default: {
-                    console.log('in default:type: ', node.type);
-                    console.log('in default:kind: ', node.kind);
                     t += convertToMarkdown(node);
                 }
             }
