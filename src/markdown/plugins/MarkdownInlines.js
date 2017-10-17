@@ -489,13 +489,18 @@ export function MarkdownInlinesPlugin(options) {
             const TYPES = [
                 'link',
                 'link-container',
+
                 'italic_asterisk',
                 'italic_underscore',
+                'italic-container',
+
                 'bold_asterisk',
                 'bold_underscore',
                 'bold-container',
+
                 'code',
                 'code-container',
+
                 'paragraph',
                 'text'
             ];
