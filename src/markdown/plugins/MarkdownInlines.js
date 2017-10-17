@@ -9,7 +9,7 @@ const REGEX = {
     ITALIC_UNDERSCORE: /([_])(?:(?=(\\?))\2.)+?\1/,
     BOLD_ASTERISK: /(\*{2})(?:(?=(\\?))\2.)+?\1/,
     BOLD_UNDERSCORE: /(_{2})(?:(?=(\\?))\2.)+?\1/,
-    STRIKE: /([~])(?:(?=(\\?))\2.)+?\1/,
+    STRIKE: /(~{2})(?:(?=(\\?))\2.)+?\1/,
     CONSECUTIVE: {
         TWO: {
             BACKTICK: /`{2,}/,
@@ -55,7 +55,7 @@ export function MarkdownInlinesPlugin(options) {
                 return 'link';
             }
 
-            if (chars.match(REGEX.CODE) && !chars.match(REGEX.CONSECUTIVE.BACKTICK)) {
+            if (chars.match(REGEX.CODE) && !chars.match(REGEX.CONSECUTIVE.TWO.BACKTICK)) {
                 return 'code';
             }
 
@@ -75,7 +75,7 @@ export function MarkdownInlinesPlugin(options) {
                 return 'bold_underscore';
             }
 
-            if (chars.match(REGEX.STRIKE) && !chars.match(REGEX.CONSECUTIVE.TILDE)) {
+            if (chars.match(REGEX.STRIKE) && !chars.match(REGEX.CONSECUTIVE.THREE.TILDE)) {
                 return 'strike';
             }
 
@@ -181,7 +181,7 @@ export function MarkdownInlinesPlugin(options) {
                 }
                 case 'strike': {
                     const [match] = chars.match(REGEX.STRIKE);
-                    const [, text] = match.split('~');
+                    const [, text] = match.split('~~');
                     return { match, text };
                 }
                 default: return {};
@@ -202,15 +202,13 @@ export function MarkdownInlinesPlugin(options) {
 
                 const { match, text } = this.getDataFromText(withClosingTag, type);
 
-                console.log('match: ', match);
-                console.log('text: ', text);
-
                 change
                     .deleteBackward(match.length - 1) // delete the ** text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
                     .call(wrapInlineWithData, 'bold_underscore', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('bold-container');
+                    .setBlock('bold-container')
+                    .splitBlock();
                 return next(change);
             }
 
@@ -235,7 +233,8 @@ export function MarkdownInlinesPlugin(options) {
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
                     .call(wrapInlineWithData, 'italic_underscore', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('italic-container');
+                    .setBlock('italic-container')
+                    .splitBlock();
                 return next(change);
             }
 
@@ -259,11 +258,12 @@ export function MarkdownInlinesPlugin(options) {
                 const { match, text } = this.getDataFromText(withClosingTag, type);
 
                 change
-                    .deleteBackward(match.length - 1) // delete the ** text
+                    .deleteBackward(match.length - 1) // delete the ~~ text
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
                     .call(wrapInlineWithData, 'strike', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('strike-container');
+                    .setBlock('strike-container')
+                    .splitBlock()
                 return next(change);
             }
         },
@@ -287,7 +287,8 @@ export function MarkdownInlinesPlugin(options) {
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
                     .call(wrapInlineWithData, 'italic_asterisk', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('italic-container');
+                    .setBlock('italic-container')
+                    .splitBlock();
                 return next(change);
             }
 
@@ -315,7 +316,8 @@ export function MarkdownInlinesPlugin(options) {
                     .insertText(text)             // add just the url text
                     .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
                     .call(wrapInlineWithData, 'bold_asterisk', { text })         // wrap the selection in an `a` tag with href
-                    .setBlock('bold-container');
+                    .setBlock('bold-container')
+                    .splitBlock();
                 return next(change);
             }
         },
@@ -340,7 +342,8 @@ export function MarkdownInlinesPlugin(options) {
                 .insertText(text)             // add just the url text
                 .extend(0 - text.length)      // extend the iSelector backwards the length of the inserted text
                 .call(wrapInlineWithData, 'link', { text, href }) // wrap the selection in an `a` tag with href
-                .setBlock('link-container');
+                .setBlock('link-container')
+                .splitBlock();
             next(change);
         },
 
@@ -366,7 +369,7 @@ export function MarkdownInlinesPlugin(options) {
 
                     // IS THIS RIGHT!?
                     .setBlock('code-container')
-                    .setBlock('paragraph');
+                    .splitBlock();
                 console.log('setting code block twice...');
                 return next(change);
             }
@@ -398,7 +401,6 @@ export function MarkdownInlinesPlugin(options) {
 
                 e.preventDefault();
                 change
-                    .setBlock('text')
                     .deleteBackward(text.length)
                     .insertText(visibleText);
                 return true;
@@ -412,7 +414,6 @@ export function MarkdownInlinesPlugin(options) {
 
                 e.preventDefault();
                 change
-                    .setBlock('text')
                     .deleteBackward(text.length)
                     .insertText(visibleText);
                 return true;
@@ -428,7 +429,6 @@ export function MarkdownInlinesPlugin(options) {
 
                 e.preventDefault();
                 change
-                    .setBlock('text')
                     .deleteBackward(text.length)
                     .insertText(visibleText);
                 return true;
@@ -438,11 +438,10 @@ export function MarkdownInlinesPlugin(options) {
                 const node = this.getInlineNode(endBlock, 'strike');
                 if (!node) return;
                 const text = node.get('text');
-                const visibleText = `~${text}`;
+                const visibleText = `~~${text}`;
 
                 e.preventDefault();
                 change
-                    .setBlock('text')
                     .deleteBackward(text.length)
                     .insertText(visibleText);
                 return true;
@@ -458,7 +457,6 @@ export function MarkdownInlinesPlugin(options) {
 
                 e.preventDefault();
                 change
-                    .setBlock('text')
                     .deleteBackward(text.length)
                     .insertText(visibleText);
                 return true;
