@@ -25,12 +25,8 @@ const initialState = State.fromJSON({
       },
       { kind: 'block', type: 'paragraph' },
       { kind: 'block', type: 'paragraph' },
-      { kind: 'block', type: 'paragraph' },
-      { kind: 'block', type: 'paragraph' },
-      { kind: 'block', type: 'paragraph' },
     ]
   },
-  copyFormat: 'markdown'
 });
 
 // Define our app...
@@ -41,7 +37,8 @@ class App extends React.Component {
     state: initialState,
     schema: {
         nodes
-    }
+    },
+    copyFormat: 'markdown'
   }
 
   // On change, update the app's React state with the new editor state.
@@ -58,10 +55,6 @@ class App extends React.Component {
       this.setState({ copyFormat });
   }
 
-  componentDidMount() {
-      this.editor.focus();
-  }
-
   onCopyHandler(e) {
     const { state } = this.editor.state;
     const { document } = state;
@@ -69,7 +62,7 @@ class App extends React.Component {
     e.preventDefault();
 
     if (copyFormat === 'html') {
-        const html = window.document.getElementById('root').innerHTML;
+        const html = window.document.querySelector('.editor').innerHTML;
         e.clipboardData.setData('text/html', html);
     } else {
         const markdownText = this.convertToMarkdown(document.toJS());
@@ -80,7 +73,7 @@ class App extends React.Component {
   // Render the editor.
   render() {
     return (
-        <div>
+        <div style={{ width: '40em', height: '40em', overflowY: 'scroll' }}>
           <div style={{ marginBottom: '2em' }}>
             <form>
                 Copy format: <span style={{ paddingRight: '2em'}} ></span>
@@ -89,7 +82,7 @@ class App extends React.Component {
                     id="markdown"
                     name="markdown"
                     value="markdown"
-                    onClick={(e) => this.radioHandler(e)}
+                    onChange={(e) => this.radioHandler(e)}
                     checked={this.state.copyFormat === 'markdown'}/>
                 <label htmlFor="markdown">Markdown</label>
               <input
@@ -97,12 +90,13 @@ class App extends React.Component {
                   id="html"
                   name="html"
                   value="html"
-                  onClick={(e) => this.radioHandler(e)}
+                  onChange={(e) => this.radioHandler(e)}
                   checked={this.state.copyFormat === 'html'}/>
               <label htmlFor="html">HTML</label>
             </form>
           </div>
           <Editor
+            className="editor"
             style={{ border: '1px solid rgba(128,128,128,0.25)', borderRadius: '5px' }}
             ref={ (editor) => {this.editor = editor;} }
             onCopy={(e) => this.onCopyHandler(e)}
