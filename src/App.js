@@ -60,11 +60,6 @@ class App extends React.Component {
     return convertToMarkdown(doc);
   }
 
-  radioHandler(e) {
-      const copyFormat = e.currentTarget.name;
-      this.setState({ copyFormat });
-  }
-
   onCopyHandler(e) {
     const { state } = this.editor.state;
     const { document } = state;
@@ -80,34 +75,30 @@ class App extends React.Component {
     }
   }
 
+  getSelectionStyle(type) {
+      return {
+          textAlign: 'center',
+          width: '50%',
+          fontWeight: (this.state.copyFormat === type ? 'bold' : 'normal'),
+          textDecoration: (this.state.copyFormat === type ? 'underline' : 'none')
+      };
+  }
+
   // Render the editor.
   render() {
     return (
-        <div style={{ width: '40em', height: '40em', overflowY: 'scroll' }}>
-          <div style={{ marginBottom: '2em' }}>
-            <form>
-                Copy format: <span style={{ paddingRight: '2em'}} ></span>
-                <input
-                    type="radio"
-                    id="markdown"
-                    name="markdown"
-                    value="markdown"
-                    onChange={(e) => this.radioHandler(e)}
-                    checked={this.state.copyFormat === 'markdown'}/>
-                <label htmlFor="markdown">Markdown</label>
-              <input
-                  type="radio"
-                  id="html"
-                  name="html"
-                  value="html"
-                  onChange={(e) => this.radioHandler(e)}
-                  checked={this.state.copyFormat === 'html'}/>
-              <label htmlFor="html">HTML</label>
-            </form>
+        <div style={{ width: '40em', overflowY: 'scroll', fontSize: '1rem', paddingTop: '0.5em' }}>
+          <div style={{ width: '100%', display: 'flex' }}>
+              <span
+                  style={this.getSelectionStyle('markdown')}
+                  onClick={(e) => this.setState({ copyFormat: 'markdown'})}>Markdown</span>
+              <span
+                  style={this.getSelectionStyle('html')}
+                  onClick={(e) => this.setState({ copyFormat: 'html'})}>HTML</span>
           </div>
           <Editor
             className="editor"
-            style={{ border: '1px solid rgba(128,128,128,0.25)', borderRadius: '5px' }}
+            style={{ border: '1px solid rgba(128,128,128,0.25)', borderRadius: '5px', fontSize: '1rem', margin: '0.5em 1em 1em' }}
             ref={ (editor) => {this.editor = editor;} }
             onCopy={(e) => this.onCopyHandler(e)}
             plugins={plugins}
