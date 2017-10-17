@@ -52,14 +52,15 @@ class App extends React.Component {
     this.setState({ state })
   }
 
-  convertToHtml(doc) {
-    return convertToHtml(doc);
+  convertToMarkdown(doc) {
+    return convertToMarkdown(doc);
   }
 
-  onCopyHandler(e) {
+  onCopyHandler(e, html) {
     const { state } = this.editor.state;
     const { document } = state;
-    console.log('here: ', this.convertToHtml(document.toJS()));
+    const markdownText = this.convertToMarkdown(document.toJS());
+    e.clipboardData.setData('text/plain', markdownText);
   }
 
   // Render the editor.
@@ -79,134 +80,134 @@ class App extends React.Component {
 
 export default App;
 
-function convertToHtml(state) {
+function convertToMarkdown(state) {
     let t = '';
     if (state.nodes) {
         state.nodes.forEach((node) => {
             switch(node.type) {
                 case 'paragraph': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `${text}\n`
                     }
                     break;
                 }
                 case 'italic_asterisk': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `*${text}*`
                     }
                     break;
                 }
                 case 'italic_underscore': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `*${text}*`
                     }
                     break;
                 }
                 case 'bold_asterisk': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `**${text}**`
                     }
                     break;
                 }
                 case 'bold_underscore': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `**${text}**`
                     }
                     break;
                 }
                 case 'code': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\`${text}\``
                     }
                     break;
                 }
                 case 'strike': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `~~${text}~~`
                     }
                     break;
                 }
                 case 'block-quote': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n> ${text}\n`;
                     }
                     break;
                 }
                 case 'bulleted-list': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n- ${text}\n`;
                     }
                     break;
                 }
                 case 'heading-one': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n# ${text}\n`;
                     }
                     break;
                 }
                 case 'heading-two': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n## ${text}\n`;
                     }
                     break;
                 }
                 case 'heading-three': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n### ${text}\n`;
                     }
                     break;
                 }
                 case 'heading-four': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n#### ${text}\n`;
                     }
                     break;
                 }
                 case 'heading-five': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n##### ${text}\n`;
                     }
                     break;
                 }
                 case 'heading-six': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n###### ${text}\n`;
                     }
                     break;
                 }
                 case 'list-item': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length) {
                         t += `\n+ ${text}\n`;
                     }
                     break;
                 }
                 case 'code-block': {
-                    const text = convertToHtml(node);
+                    const text = convertToMarkdown(node);
                     if (text.length){
-                        t += `\n\`\`\`${text}\`\`\``;
+                        t += `\n\`\`\`\n${text}\n\`\`\``;
                     }
                     break;
                 }
                 default: {
                     console.log('in default:type: ', node.type);
                     console.log('in default:kind: ', node.kind);
-                    t += convertToHtml(node);
+                    t += convertToMarkdown(node);
                 }
             }
         });
