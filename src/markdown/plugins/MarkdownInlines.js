@@ -370,7 +370,6 @@ export function MarkdownInlinesPlugin(options) {
                     // IS THIS RIGHT!?
                     .setBlock('code-container')
                     .splitBlock();
-                console.log('setting code block twice...');
                 return next(change);
             }
         },
@@ -494,9 +493,11 @@ export function MarkdownInlinesPlugin(options) {
                 'italic_underscore',
                 'bold_asterisk',
                 'bold_underscore',
-                'italic-container',
+                'bold-container',
                 'code',
-                'code-container'
+                'code-container',
+                'paragraph',
+                'text'
             ];
             const { endBlock } = change.state;
             if (TYPES.includes(endBlock.type)) {
