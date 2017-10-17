@@ -77,9 +77,6 @@ export function MarkdownPrefixPlugin(options) {
             const chars = startBlock.text.slice(0, startOffset).replace(/\s*/g, '')
             const type = this.getType(chars)
 
-            console.log('startBlock.type: ', startBlock.type);
-            console.log('type: ', type);
-
             if (!type) return
             if (startBlock.type === 'code-block') return;
             if (type == 'list-item' && startBlock.type == 'list-item') return
