@@ -12,6 +12,7 @@ const plugins = [
     MarkdownPrefixPlugin(),
 ];
 
+const LOCAL_STORAGE_KEY = 'slate-markdown:document';
 const nodes = _.assign({}, markdownPrefixNodes, markdownInlineNodes);
 
 // import initialState from './state.json'
@@ -34,16 +35,25 @@ class App extends React.Component {
 
   // Set the initial state when the app is first constructed.
   state = {
-    state: initialState,
+    state: this.getFromLocalStorage(),
     schema: {
         nodes
     },
     copyFormat: 'markdown'
   }
 
+  getFromLocalStorage() {
+      const localData = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      return localData
+        ? State.fromJSON(JSON.parse(localData))
+        : initialState;
+  }
+
   // On change, update the app's React state with the new editor state.
   onChange = ({ state }) => {
     this.setState({ state })
+    // hack to save data
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.toJS()));
   }
 
   convertToMarkdown(doc) {
